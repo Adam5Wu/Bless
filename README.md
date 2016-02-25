@@ -1,7 +1,7 @@
 # Bless
 Automated change-annotated source code generator
 
-## "Why the (*#$^% he/she/I/whoever wrote this line?"
+## "Why the (*#$^% did he/she/I/whoever write this line?"
 I often find myself wondering when stepping throw a piece of buggy code.
 
 Well, this utility intends to ease the pain a little bit, by providing annotated source code based on Git commit history.
@@ -18,6 +18,8 @@ For each version managed, non-binary file, generate a change-annotated version o
   The order of commit log at the end of each file is also costomizable, following gnu sort semantics
 
 ### Screenshot
+
+![Blessed Java Source](Bless.PNG)
 
 ## How to use
 This is a commandline utility, designed to be invoked with current path in a Git repository.
