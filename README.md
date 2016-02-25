@@ -38,11 +38,11 @@ All parameters are optional.
   * **Default behavior: "2r" -- sort the second field (date) in reverse order**
 
 ### Generated Content
-Normally, the script will produce a file named "<original-name>.blessed", with change annotated content.
+Normally, the script will produce a file named "<original-name>.blessed", with change-annotated content.
 
-Because this content is *NOT* the original content, therefore most likely, the file no longer suitable for the original processing it is designed to go through (e.g. compilation, shell execution, etc.). The extension change reflects this fact.
+Because this content is *NOT* the original content, therefore most likely, the file is no longer suitable for the original processing it was designed to go through (e.g. compilation, interpretation, etc.). The extension change reflects this fact.
 
-However, for certain specific type of files, whose content has well-defined "block-comment" syntax, it is possible to produce change-annotated source that preserves the original semantics, and thus the origina processing. For example, currently this utility recognizes Java/C/C++ sources by file extension, and apply special process to generate compilable change-annotated sources.
+However, for certain specific type of files, whose content has well-defined "block-comment" syntax, it is possible to produce change-annotated source that preserves the original source semantics, and thus the original processing. For example, currently this utility recognizes Java/C/C++ sources by file extension, and apply special processing to generate compilable change-annotated sources. For those sources, the original file name is preserved.
 
 ### Output Files
 * A directory "build/blessed" will be created
