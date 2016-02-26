@@ -1,7 +1,7 @@
 # Bless
 Automated change-annotated source code generator
 
-## "Why the (*#$^% did he/she/I/whoever write this line?"
+## "Why the (#$^% did he/she/I/whoever write this line?"
 I often find myself wondering when stepping throw a piece of buggy code.
 
 Well, this utility intends to ease the pain a little bit, by providing annotated source code based on Git commit history.
@@ -24,18 +24,29 @@ For each version managed, non-binary file, generate a change-annotated version o
 ## How to use
 This is a commandline utility, designed to be invoked with current path in a Git repository.
 
+### Requirement
+Currently only UNIX-like system is supported.
+
+Required supporting utilities:
+* bash version 4+
+* git
+* sed
+* cut
+* unix2dos
+* tar
+
 ### Syntax
 ```
 <path/to/>Bless.sh [index-prefix] [revision-from] [sort-field]
 ```
 
 All parameters are optional.
-* index-prefix: when specified, the first word of each commit message is examined, if prefix matches, the content is used along side with the commit hash as tag to annotate changes.
-  * **Default behavior: only use commit hash as tag**
-* revision-from: when specified, only changes in revisions later than provided will be considered;
-  * **Default behavior: track changes from the last annotated Git tag**
-* sort-field: when specified, sort commit log message in specified order. (Syntax refer to gnu sort manual, KEYDEF)
-  * **Default behavior: "2r" -- sort the second field (date) in reverse order**
+* **index-prefix**: when specified, the first word of each commit message is examined, if prefix matches, the content is used along side with the commit hash as tag to annotate changes.
+  * *Default behavior: only use commit hash as tag*
+* **revision-from**: when specified, only changes in revisions later than provided will be considered;
+  * *Default behavior: track changes from the last annotated Git tag*
+* **sort-field**: when specified, sort commit log message in specified order. (Syntax refer to gnu sort manual, KEYDEF)
+  * *Default behavior: "2r" -- sort the second field (date) in reverse order*
 
 ### Generated Content
 Normally, the script will produce a file named "<original-name>.blessed", with change-annotated content.
@@ -55,17 +66,6 @@ However, for certain specific type of files, whose content has well-defined "blo
 * A file "build/Source.Blessed.tgz" will be created
   * It contained tar-gzipped content of the "build/blessed" directory
   * This package is suitable to be part of a whole project archiving
-
-## Requirement
-Currently only *nix like system is supported.
-
-Required supporting utilities:
-* bash version 4+
-* git
-* sed
-* cut
-* unix2dos
-* tar
 
 # License
 BSD 3-clause New License

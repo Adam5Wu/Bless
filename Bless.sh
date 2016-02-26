@@ -11,14 +11,12 @@ BLESSPKG="Source.Blessed"
 [ ${BASH_VERSION%%.*} -lt 4 ] && echo "Require bash version 4 and up!" && exit 1
 TOOLS=( git sed cut unix2dos tar )
 for t in ${TOOLS[@]}; do
-	echo -n "Checking '$t'... " && which "$t" || { echo "not found!"; exit 2; }
+	which "$t" >/dev/null || { echo "Utility '$t' not found!"; exit 2; }
 done
-echo -n "Checking annotated tags... "
-git describe 2>/dev/null || {
-	echo "none detected!";
-	echo -n "Checking any tag... "
-	git describe --tags 2>/dev/null || {
-		echo "none detected!";
+# Check annotated tags
+git describe 1>/dev/null 2>&1 || {
+	# Backup plan, check any tag
+	git describe --tags 1>/dev/null 2>&1 || {
 		echo "ERROR: Please tag you repository before using this tool!";
 		exit 3
 	}
@@ -48,6 +46,7 @@ fi
 [ "$TAGFROM" == "$REVZERO" ] && echo "Blessing from the very beginning..." || echo "Blessing from revision '${TAGFROM}'..."
 
 FLUSH=0
+mkdir -p ${BUILDDIR}
 # Load previous profile
 [ -f "${BUILDDIR}/${BLESSCFG}" ] && . ${BUILDDIR}/${BLESSCFG} || FLUSH=X
 
@@ -56,7 +55,7 @@ FLUSH=0
 [ "$_SORTFIELD" != "$SORTFIELD" ] && FLUSH=3
 
 # Check if previous generated files need to be flushed
-[ "$FLUSH" != "0" ] && rm -rf ${BLESSDIR} && ( echo "_UTX=\"$UTX\"" ; echo "_SORTFIELD=\"$SORTFIELD\"" ; echo "_TAGFROM=\"$TAGFROM\"" ) > ${BUILDDIR}/${BLESSCFG}
+[ "$FLUSH" != "0" ] && rm -rf ${BLESSDIR} && echo -e "_UTX=\"$UTX\"\n_TAGFROM=\"$TAGFROM\"\n_SORTFIELD=\"$SORTFIELD\"" > ${BUILDDIR}/${BLESSCFG}
 
 # Create blessed directory (if not exists)
 mkdir -p ${BLESSDIR}
@@ -69,6 +68,9 @@ CHANGED=()
 # For each file, generate the blessed version
 for (( x=0; x<${#ALLFILES[@]}; x++ )); do
 	f="${ALLFILES[$x]}"
+
+	# Detect submodule
+	[ -d "$f" ] && echo "Bypassing submodule '$f'..." && continue
 
 	# Skip if blessed file exists and is newer than original
 	fbless=
@@ -85,19 +87,24 @@ for (( x=0; x<${#ALLFILES[@]}; x++ )); do
 		continue
 	}
 
-	# Detect whether git thinks the file is binary
-	CHG=`git diff 4b825dc642cb6eb9a060e54bf8d69288fbee4904 --numstat HEAD -- "$f" | cut -f1`
-	[ "$CHG" == "-" ] && echo "Skipping binary '$f'..." && continue
-
 	CHANGED+=("$f")
 	BLESSED["$fbless"]=1
+	# Detect whether git thinks the file is binary
+	CHG=`git diff 4b825dc642cb6eb9a060e54bf8d69288fbee4904 --numstat HEAD -- "$f" | cut -f1`
+	[ "$CHG" == "-" ] && {
+		echo "Skipping binary '$f'..."
+		mkdir -p "`dirname "$fbless"`"
+		echo "(No blessings for binary data)" > "$fbless"
+		continue
+	}
+
 	echo "Blessing '$f'..."
 	# Gather the involved revisions
 	REVS=( `git blame -b -s -w $TAGFROM.. -- "$f" | cut -d' ' -f1 | sort | uniq` )
 	# Gather revision logs
 	COMMITS=`for r in ${REVS[@]}; do [ ! -z "$r" ] && echo -n "[$r] " && git log --oneline --pretty=tformat:"%cd (%cn)%x09%s" --date=short -n 1 "$r"; done`
 	# Generate real blame file
-	mkdir -p "${BLESSDIR}/`dirname "$f"`"
+	mkdir -p "`dirname "$fbless"`"
 	git blame -b -s -w $TAGFROM.. -- "$f" > "$fbless"
 
 	# Uniform tagging handling
