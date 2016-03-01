@@ -25,7 +25,7 @@ For each version managed, non-binary file, generate a change-annotated version o
 This is a commandline utility, designed to be invoked with current path in a Git repository.
 
 ### Requirement
-Currently only UNIX-like system is supported.
+Currently only UNIX-like environment is supported. (Seems to work fine in Git bash on Windows)
 
 Required supporting utilities:
 * bash version 4+
