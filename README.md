@@ -48,6 +48,14 @@ All parameters are optional.
 * **sort-field**: when specified, sort commit log message in specified order. (Syntax refer to gnu sort manual, KEYDEF)
   * *Default behavior: "2r" -- sort the second field (date) in reverse order*
 
+### Blacklist Feature
+A prefix based backlist is supported.
+
+To use this feature:
+1. Create or edit the file "build/.bless.blacklist"
+2. Put the path prefixes in this file, one on each line
+  * Use relative path wrt. the directory bless script is executed
+
 ### Generated Content
 Normally, the script will produce a file named "<original-name>.blessed", with change-annotated content.
 
@@ -63,8 +71,16 @@ However, for certain specific type of files, whose content has well-defined "blo
   * It records the last run configuration, in order to optimize future runs
     * If the next execution of this script has matching configuration, only changed files will be re-processed
     * If this file is deleted, the next execution of this script will re-process all files from scratch
+* A file "build/.bless.keyed" will be created
+  * It records all files that have commits, and all commits have a valid key
+* A file "build/.bless.unkeyed" will be created
+  * It records all files that have commits, and not all commits have a valid key
+  * If key-prefix is not specified, all files that have commits are listed in this file
 * A file "build/Source.Blessed.tgz" will be created
-  * It contained tar-gzipped content of the "build/blessed" directory
+  * It contained tar-gzipped content of the "build/blessed" directory, plus three following files:
+    * ".bless.keyed" from "build/.bless.keyed"
+    * ".bless.unkeyed" from "build/.bless.unkeyed"
+    * ".bless.blacklist" from "build/.bless.blacklist"
   * This package is suitable to be part of a whole project archiving
 
 # License
