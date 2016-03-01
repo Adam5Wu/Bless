@@ -10,11 +10,11 @@ Well, this utility intends to ease the pain a little bit, by providing annotated
 For each version managed, non-binary file, generate a change-annotated version of the content
 * Each original line now bares a tag on the left, if any change happened between a specific commit to the current
   * When tag = commit hash, this is essentially the git-blame feature.
+* Optionally, you may opt to customize the tag by adding an additional *key* along side with the commit hash.
+  *  All *keys* should have a common prefix, and put as the first word in the commit message
 * In addition, at the end of each file, a commit log is appended describing all and only commits that happened in this file
   *  The description includes commit hash, date, commiter name, and commit message, ordered in reverse date.
   *  This is essentially a git-log feature.
-* Optionally, you may opt to customize the tag by adding an additional index along side with the commit hash.
-  *  All indics should have a common prefix, and put as the first word in the commit message
   *  The order of commit log at the end of each file is also costomizable, following gnu sort semantics
 
 ### Screenshot
@@ -37,11 +37,11 @@ Required supporting utilities:
 
 ### Syntax
 ```
-<path/to/>Bless.sh [index-prefix] [revision-from] [sort-field]
+<path/to/>Bless.sh [key-prefix] [revision-from] [sort-field]
 ```
 
 All parameters are optional.
-* **index-prefix**: when specified, the first word of each commit message is examined, if prefix matches, the content is used along side with the commit hash as tag to annotate changes.
+* **key-prefix**: when specified, the first word of each commit message is examined, if prefix matches, the content is used along side with the commit hash as tag to annotate changes.
   * *Default behavior: only use commit hash as tag*
 * **revision-from**: when specified, only changes in revisions later than provided will be considered;
   * *Default behavior: track changes from the last annotated Git tag*

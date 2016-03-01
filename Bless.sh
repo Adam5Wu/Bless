@@ -5,6 +5,9 @@ REVZERO="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 BUILDDIR="build"
 BLESSDIR="${BUILDDIR}/blessed"
 BLESSCFG=".bless.config"
+BLESSWT=".bless.keyed"
+BLESSWOT=".bless.unkeyed"
+BLESSNOT=".bless.blacklist"
 BLESSPKG="Source.Blessed"
 
 # Environmental sanity check
@@ -24,8 +27,8 @@ git describe 1>/dev/null 2>&1 || {
 }
 
 # Pull parameters
-UTX=
-[ $# -ge 1 ] && UTX="$1"
+KEYPFX=
+[ $# -ge 1 ] && KEYPFX="$1"
 TAGFROM=
 [ $# -ge 2 ] && TAGFROM="$2"
 SORTFIELD=2r
@@ -50,15 +53,32 @@ mkdir -p ${BUILDDIR}
 # Load previous profile
 [ -f "${BUILDDIR}/${BLESSCFG}" ] && . ${BUILDDIR}/${BLESSCFG} || FLUSH=X
 
-[ "$_UTX" != "$UTX" ] && FLUSH=1
+[ "$_KEYPFX" != "$KEYPFX" ] && FLUSH=1
 [ "$_TAGFROM" != "$TAGFROM" ] && FLUSH=2
 [ "$_SORTFIELD" != "$SORTFIELD" ] && FLUSH=3
 
 # Check if previous generated files need to be flushed
-[ "$FLUSH" != "0" ] && rm -rf ${BLESSDIR} && echo -e "_UTX=\"$UTX\"\n_TAGFROM=\"$TAGFROM\"\n_SORTFIELD=\"$SORTFIELD\"" > ${BUILDDIR}/${BLESSCFG}
+[ "$FLUSH" != "0" ] && {
+	rm -rf ${BLESSDIR}
+	echo -e "_KEYPFX=\"$KEYPFX\"\n_TAGFROM=\"$TAGFROM\"\n_SORTFIELD=\"$SORTFIELD\"" > ${BUILDDIR}/${BLESSCFG}
+	rm -rf ${BUILDDIR}/${BLESSWT}
+	rm -rf ${BUILDDIR}/${BLESSWOT}
+}
 
 # Create blessed directory (if not exists)
 mkdir -p ${BLESSDIR}
+
+# Load previous tagged and untagged file list (if exists)
+declare -A KEYED
+[ -f ${BUILDDIR}/${BLESSWT} ] && while read f; do KEYED["$f"]=0; done < ${BUILDDIR}/${BLESSWT}
+declare -A UNKEYED
+[ -f ${BUILDDIR}/${BLESSWOT} ] && while read f; do UNKEYED["$f"]=0; done < ${BUILDDIR}/${BLESSWOT}
+
+# Load black list
+BLACKLIST=()
+[ -f ${BUILDDIR}/${BLESSNOT} ] && {
+	readarray -t BLACKLIST < "${BUILDDIR}/${BLESSBLS}"
+} || touch "${BUILDDIR}/${BLESSNOT}"
 
 # Get all files under VCS
 readarray -t ALLFILES < <( git ls-tree --name-only -r HEAD )
@@ -66,11 +86,26 @@ readarray -t ALLFILES < <( git ls-tree --name-only -r HEAD )
 declare -A BLESSED
 CHANGED=()
 # For each file, generate the blessed version
-for (( x=0; x<${#ALLFILES[@]}; x++ )); do
-	f="${ALLFILES[$x]}"
-
+for f in "${ALLFILES[@]}"; do
+	SKIP=
 	# Detect submodule
-	[ -d "$f" ] && echo "Bypassing submodule '$f'..." && continue
+	[ -d "$f" ] && echo "Bypassing submodule '$f'..." && SKIP="$f"
+
+	[ -z "$SKIP" ] && {
+		# Check black list
+		BLACKLISTED=
+		for b in "${BLACKLIST[@]}"; do
+			[ $f == $b* ] && BLACKLISTED="$b" && break
+		done
+		[ ! -z "$BLACKLISTED" ] && echo "Bypassing black-listed file '$f'..." && SKIP="$f"
+	}
+
+	# Process file skipping
+	[ ! -z "$SKIP" ] && {
+		[ ${KEYED["$f"]+1} ] && CHANGED+=("ST:$f") && unset KEYED["$f"]
+		[ ${UNKEYED["$f"]+1} ] && CHANGED+=("SU:$f") && unset UNKEYED["$f"]
+		continue
+	}
 
 	# Skip if blessed file exists and is newer than original
 	fbless=
@@ -87,7 +122,7 @@ for (( x=0; x<${#ALLFILES[@]}; x++ )); do
 		continue
 	}
 
-	CHANGED+=("$f")
+	CHANGED+=("B:$f")
 	BLESSED["$fbless"]=1
 	# Detect whether git thinks the file is binary
 	CHG=`git diff 4b825dc642cb6eb9a060e54bf8d69288fbee4904 --numstat HEAD -- "$f" | cut -f1`
@@ -108,28 +143,43 @@ for (( x=0; x<${#ALLFILES[@]}; x++ )); do
 	git blame -b -s -w $TAGFROM.. -- "$f" > "$fbless"
 
 	# Uniform tagging handling
-	if [ ! -z "$UTX" ]; then
-		readarray -t TAGS < <( echo "$COMMITS" | cut -f2- )
-		UTXLEN=${#UTX}
+	UNKEY="N/A"
+	if [ ! -z "$KEYPFX" ]; then
+		UNKEY=
+		readarray -t KEYS < <( echo "$COMMITS" | cut -f2- )
+		KEYPFXLEN=${#KEYPFX}
 		MAXLEN=0
-		for (( i=0; i<${#TAGS[@]}; i++ )); do
-			TAG=`echo "${TAGS[$i]}" | cut -d' ' -f1`
-			[ "${TAG:0:$UTXLEN}" != "$UTX" ] && echo "WARNING: Untagged message '${TAGS[$i]}'" && TAG="$UTX?"
-			LEN=${#TAG}
-			[ $LEN -gt $MAXLEN ] && MAXLEN=$LEN
-			TAGS[$i]=$TAG
+		for (( i=0; i<${#KEYS[@]}; i++ )); do
+			KEY=`echo "${KEYS[$i]}" | cut -d' ' -f1`
+			[ "${KEY:0:$KEYPFXLEN}" != "$KEYPFX" ] && {
+				echo "WARNING: Unkeyed message '${KEYS[$i]}'"
+				KEY="$KEYPFX?"
+				UNKEY="$f"
+			}
+			LEN=${#KEY}
+			[ $KEY -gt $MAXLEN ] && MAXLEN=$LEN
+			KEYS[$i]=$KEY
 		done
-		for (( i=0; i<${#TAGS[@]}; i++ )); do
-			TAGS[$i]=`printf "%-${MAXLEN}s" ${TAGS[$i]}`
+		for (( i=0; i<${#KEYS[@]}; i++ )); do
+			KEYS[$i]=`printf "%-${MAXLEN}s" ${KEYS[$i]}`
 		done
-		for (( i=0; i<${#TAGS[@]}; i++ )); do
-			sed -i -e "s/^${REVS[$i]}/${REVS[$i]} ${TAGS[$i]}/" "$fbless"
+		for (( i=0; i<${#KEYS[@]}; i++ )); do
+			sed -i -e "s/^${REVS[$i]}/${REVS[$i]} ${KEYS[$i]}/" "$fbless"
 		done
 		sed -i -e "s/^ /  `printf "%${MAXLEN}s" ''`/" "$fbless"
 	fi
 
 	# Sort comment logs
 	COMMITS=`echo "$COMMITS" | sort -k $SORTFIELD`
+
+	# Update bless tagging status
+	[ -z "$COMMITS" ] && { unset KEYED["$f"]; unset UNKEYED["$f"]; }
+	[ ! -z "$COMMITS" ] && { [ -z "$UNKEY" ] && {
+		unset UNKEYED["$f"]; KEYED["$f"]=1
+	} || {
+		unset KEYED["$f"]; UNKEYED["$f"]=1
+	} }
+
 	# Optionally produce compilable source code for certain languages that supports block comments
 	case "${f##*.}" in
 	java|c|cpp|h|hpp)
@@ -149,19 +199,27 @@ done
 
 # Remove blessed version of any stale files
 readarray -t BLSFILES < <( find "${BLESSDIR}" -type f )
-for (( x=0; x<${#BLSFILES[@]}; x++ )); do
-	f="${BLSFILES[$x]}"
-
+for f in "${BLSFILES[@]}"; do
 	[ -z "${BLESSED[$f]}" ] && {
-		CHANGED+=("$f")
+		CHANGED+=("D:$f")
 		echo "Removing stale bless '$f'..."
 		rm -f "$f"
 	}
 done
 
-# Prepare a compress package containing the blames
+# Remove stale files in tagging status
+for f in "${!KEYED[@]}"; do [ ! -f "$f" ] && { CHANGED+=("DT:$f"); unset KEYED["$f"]; } done 
+for f in "${!UNKEYED[@]}"; do [ ! -f "$f" ] && { CHANGED+=("DU:$f"); unset UNKEYED["$f"]; } done 
+
 [ ${#CHANGED[@]} -ne 0 ] && {
+	# Update tagging status files
+	echo -n > ${BUILDDIR}/${BLESSWT}
+	for f in "${!KEYED[@]}"; do echo "$f" >> ${BUILDDIR}/${BLESSWT}; done
+	echo -n > ${BUILDDIR}/${BLESSWOT}
+	for f in "${!UNKEYED[@]}"; do echo "$f" >> ${BUILDDIR}/${BLESSWOT}; done
+
+	# Prepare a compress package containing the blames
 	echo "Generating blessed source package..."
-	( cd ${BLESSDIR} && tar -cz --xform s:'./':: -f ../${BLESSPKG}.tgz . )
+	( cd ${BLESSDIR} && tar -cz --xform s:'./':: -f ../${BLESSPKG}.tgz . "../${BLESSWT}" "../${BLESSWOT}" "../${BLESSNOT}" 2>/dev/null )
 } || echo "No change from previous bless"
 
