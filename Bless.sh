@@ -77,7 +77,8 @@ declare -A UNKEYED
 # Load black list
 BLACKLIST=()
 [ -f ${BUILDDIR}/${BLESSNOT} ] && {
-	readarray -t BLACKLIST < "${BUILDDIR}/${BLESSBLS}"
+	readarray -t BLACKLIST < "${BUILDDIR}/${BLESSNOT}"
+	for b in "${BLACKLIST[@]}"; do echo "Black-list: $b"; done
 } || touch "${BUILDDIR}/${BLESSNOT}"
 
 # Get all files under VCS
@@ -89,7 +90,10 @@ CHANGED=()
 for f in "${ALLFILES[@]}"; do
 	SKIP=
 	# Detect submodule
-	[ -d "$f" ] && echo "Bypassing submodule '$f'..." && SKIP="$f"
+	[ -d "$f" ] && {
+		echo "Bypassing submodule '$f'..."
+		SKIP="M:$f"
+	}
 
 	[ -z "$SKIP" ] && {
 		# Check black list
@@ -97,7 +101,10 @@ for f in "${ALLFILES[@]}"; do
 		for b in "${BLACKLIST[@]}"; do
 			[ $f == $b* ] && BLACKLISTED="$b" && break
 		done
-		[ ! -z "$BLACKLISTED" ] && echo "Bypassing black-listed file '$f'..." && SKIP="$f"
+		[ ! -z "$BLACKLISTED" ] && {
+			#echo "Bypassing black-listed file '$f'..."
+			SKIP="B:$f"
+		}
 	}
 
 	# Process file skipping
@@ -118,6 +125,7 @@ for f in "${ALLFILES[@]}"; do
 	;;
 	esac
 	[ -f "$fbless" -a "$fbless" -nt "$f" ] && {
+		#echo "Bypassing unmodified file '$f'..."
 		BLESSED["$fbless"]=0
 		continue
 	}
