@@ -81,6 +81,8 @@ BLACKLIST=()
 	for b in "${BLACKLIST[@]}"; do [ ! -z "$b" ] && echo "Black-list: $b"; done
 } || touch "${BUILDDIR}/${BLESSNOT}"
 
+trap "echo 'WARNING: Bless aborted, invalidating whole cache...'; rm -f ${BUILDDIR}/${BLESSCFG}; exit" SIGHUP SIGINT SIGTERM
+
 # Get all files under VCS
 readarray -t ALLFILES < <( git ls-tree --name-only -r HEAD )
 
@@ -99,7 +101,9 @@ for f in "${ALLFILES[@]}"; do
 		# Check black list
 		BLACKLISTED=
 		for b in "${BLACKLIST[@]}"; do
-			[ ! -z "$b" ] && [ $f == $b* ] && BLACKLISTED="$b" && break
+			[ ! -z "$b" ] && {
+				[ "${f:0:${#b}}" == "$b" ] && BLACKLISTED="$b" && break
+			}
 		done
 		[ ! -z "$BLACKLISTED" ] && {
 			#echo "Bypassing black-listed file '$f'..."
@@ -152,7 +156,7 @@ for f in "${ALLFILES[@]}"; do
 
 	# Uniform tagging handling
 	UNKEY="N/A"
-	if [ ! -z "$KEYPFX" ]; then
+	if [ ! -z "$COMMITS" -a ! -z "$KEYPFX" ]; then
 		UNKEY=
 		readarray -t KEYS < <( echo "$COMMITS" | cut -f2- )
 		KEYPFXLEN=${#KEYPFX}
@@ -165,7 +169,7 @@ for f in "${ALLFILES[@]}"; do
 				UNKEY="$f"
 			}
 			LEN=${#KEY}
-			[ $KEY -gt $MAXLEN ] && MAXLEN=$LEN
+			[ $LEN -gt $MAXLEN ] && MAXLEN=$LEN
 			KEYS[$i]=$KEY
 		done
 		for (( i=0; i<${#KEYS[@]}; i++ )); do
