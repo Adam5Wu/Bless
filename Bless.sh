@@ -78,7 +78,7 @@ declare -A UNKEYED
 BLACKLIST=()
 [ -f ${BUILDDIR}/${BLESSNOT} ] && {
 	readarray -t BLACKLIST < "${BUILDDIR}/${BLESSNOT}"
-	for b in "${BLACKLIST[@]}"; do echo "Black-list: $b"; done
+	for b in "${BLACKLIST[@]}"; do [ ! -z "$b" ] && echo "Black-list: $b"; done
 } || touch "${BUILDDIR}/${BLESSNOT}"
 
 # Get all files under VCS
@@ -99,7 +99,7 @@ for f in "${ALLFILES[@]}"; do
 		# Check black list
 		BLACKLISTED=
 		for b in "${BLACKLIST[@]}"; do
-			[ $f == $b* ] && BLACKLISTED="$b" && break
+			[ ! -z "$b" ] && [ $f == $b* ] && BLACKLISTED="$b" && break
 		done
 		[ ! -z "$BLACKLISTED" ] && {
 			#echo "Bypassing black-listed file '$f'..."
