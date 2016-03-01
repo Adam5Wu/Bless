@@ -49,9 +49,8 @@ All parameters are optional.
   * *Default behavior: "2r" -- sort the second field (date) in reverse order*
 
 ### Blacklist Feature
-A prefix based backlist is supported.
+A prefix based backlist is supported. To use this feature:
 
-To use this feature:
 1. Create or edit the file "build/.bless.blacklist"
 2. Put the path prefixes in this file, one on each line
   * Use relative path wrt. the directory bless script is executed
