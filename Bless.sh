@@ -195,10 +195,10 @@ for f in "${ALLFILES[@]}"; do
 	# Optionally produce compilable source code for certain languages that supports block comments
 	case "${f##*.}" in
 	java|c|cpp|h|hpp)
-		sed -i -e 's/^\([^)]\+)\)/\/* \1 *\//' "$fbless"
-		[ ! -z "$COMMITS" ] && ( echo && echo "---- Commit Logs ----" && echo "$COMMITS" ) >> "$fbless"
-                sed -i -e 's/^\([^/]\)/\/\/ \1/' "$fbless"
-		sed -i -e 's/^\/\(\*[^*]\+\*\)\/\(\s\+\)\*/ \1 \2*/' "$fbless"
+		sed -i -e '/\/\*\(\(?!\*\/\).\)*$/,/\*\// { /\/\*/n; s/^/`/ }' "$fbless"
+		sed -i -e 's/^\([^`][^)]\+)\)/\/* \1 *\//' "$fbless"
+		sed -i -e 's/^`\([^)]\+)\)/ * \1 * /' "$fbless"
+		[ ! -z "$COMMITS" ] && ( echo && echo "---- Commit Logs ----" && echo "$COMMITS" ) | sed 's/^\(.\)/\/\/ \1/' >> "$fbless"
 	;;
 	*)
 		[ ! -z "$COMMITS" ] && ( echo && echo "---- Commit Logs ----" && echo "$COMMITS" ) >> "$fbless"
