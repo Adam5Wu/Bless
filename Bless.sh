@@ -43,8 +43,11 @@ if [ -z "$TAGFROM" ]; then
 		[ -z "$TAGFROM" ] && TAGFROM="$REVZERO"
 	}
 else
-	TAGFROM=`git describe --tags ${TAGFROM} 2>/dev/null`
-	[ -z "$TAGFROM" ] && { echo "ERROR: Invalid origin tag '${TAGFROM}'"; exit 4; }
+	[ "$TAGFROM" == '^' ] && TAGFROM="$REVZERO" || {
+		ALTTAGFROM=`git describe --tags ${TAGFROM} 2>/dev/null`
+		[ -z "$ALTTAGFROM" ] && { echo "ERROR: Invalid origin tag '${TAGFROM}'"; exit 4; }
+		TAGFROM="$ALTTAGFROM"
+	}
 fi
 [ "$TAGFROM" == "$REVZERO" ] && echo "Blessing from the very beginning..." || echo "Blessing from revision '${TAGFROM}'..."
 
