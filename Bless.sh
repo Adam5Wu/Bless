@@ -20,8 +20,7 @@ done
 git describe 1>/dev/null 2>&1 || {
 	# Backup plan, check any tag
 	git describe --tags 1>/dev/null 2>&1 || {
-		echo "ERROR: Please tag you repository before using this tool!";
-		exit 3
+		echo "HINT: Use tags to help you better organize version history!";
 	}
 	echo "HINT: Use annotated tags to maximize the benefit of using this tool!";
 }
@@ -36,16 +35,27 @@ SORTFIELD=2r
 
 # Parameter sanity check
 if [ -z "$TAGFROM" ]; then
+	# Try to get the last annotated tag
 	TAGFROM=`git describe --abbrev=0 2>/dev/null`
+	# If not available, fallback to any tag
+	[ -z "$TAGFROM" ] && TAGFROM=`git describe --tags --abbrev=0 2>/dev/null`
+	# If still not available, fallback to the beginning of repo
 	[ -z "$TAGFROM" ] && TAGFROM="$REVZERO" || {
-		TAGCUR=`git describe`
-		[ "$TAGFROM" == "$TAGCUR" ] && TAGFROM=`git describe --abbrev=0 ${TAGFROM}^ 2>/dev/null`
+		# If we got a tag, check if we are at the tag itself
+		TAGCUR=`git describe --tags`
+		# If so, walk back to previous annotated tag
+		[ "$TAGFROM" == "$TAGCUR" ] && TAGFROM=`git describe --abbrev=0 ${TAGCUR}^ 2>/dev/null`
+		# If not available, fallback to walk back to previous any tag
+		[ -z "$TAGFROM" ] && TAGFROM=`git describe --tags --abbrev=0 ${TAGCUR}^ 2>/dev/null`
+		# If failed again, fallback to beginning of repo
 		[ -z "$TAGFROM" ] && TAGFROM="$REVZERO"
 	}
 else
+	# If special symbol is used, start from beginning of repo
 	[ "$TAGFROM" == '^' ] && TAGFROM="$REVZERO" || {
-		ALTTAGFROM=`git describe --tags ${TAGFROM} 2>/dev/null`
-		[ -z "$ALTTAGFROM" ] && { echo "ERROR: Invalid origin tag '${TAGFROM}'"; exit 4; }
+		# Otherwise, assume it is a valid tag or hash, probe the repo
+		ALTTAGFROM=`git describe --tags --always ${TAGFROM} 2>/dev/null`
+		[ -z "$ALTTAGFROM" ] && { echo "ERROR: Invalid origin tag '${TAGFROM}'"; exit 3; }
 		TAGFROM="$ALTTAGFROM"
 	}
 fi
