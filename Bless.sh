@@ -94,7 +94,7 @@ BLACKLIST=()
 	for b in "${BLACKLIST[@]}"; do [ ! -z "$b" ] && echo "Black-list: $b"; done
 } || touch "${BUILDDIR}/${BLESSNOT}"
 
-trap "echo 'WARNING: Bless aborted, invalidating whole cache...'; rm -f ${BUILDDIR}/${BLESSCFG}; exit" SIGHUP SIGINT SIGTERM
+trap "echo 'WARNING: Bless aborted, invalidating whole cache...'; rm -f ${BUILDDIR}/${BLESSCFG}; exit -1" SIGHUP SIGINT SIGTERM
 
 # Get all files under VCS
 readarray -t ALLFILES < <( git ls-tree --name-only -r HEAD )
